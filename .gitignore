@@ -18,7 +18,7 @@ lib64/
 parts/
 sdist/
 var/
-*.egg-info/
+pysqllike.egg-info/
 .installed.cfg
 *.egg
 
@@ -52,3 +52,12 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# temp
+*.bak
+*.tmp
+*.*~
+
+# virtualenv
+pysqllike-venv/
+.dev/activate
