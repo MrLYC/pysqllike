@@ -4,7 +4,7 @@
 from collections import namedtuple
 
 from unittest import TestCase
-from pysqllike.sqllike_filters import getval
+from pysqllike.sqllike_filters import getval, select
 
 ObjModel = namedtuple("ObjModel", ["key"])
 
@@ -38,3 +38,60 @@ class Test_getval(TestCase):
         self.assertEqual(getval(self.model1, "dict.obj.0.1.key"), True)
 
         self.assertEqual(getval(self.model1, "dict.noexist", False), False)
+
+
+class Test_select(TestCase):
+    model1 = [
+        {"name": "1", "age": 23},
+        {"name": "4", "age": 56},
+        {"name": "7", "age": 89}]
+
+    model2 = [
+        {"name": "1", "obj": ObjModel(key="a")},
+        {"name": "2", "obj": ObjModel(key="b")},
+        {"name": "3", "obj": ObjModel(key="c")},
+        {"name": "4", "obj": ObjModel(key="d")}]
+
+    model3 = [
+        ObjModel(key={"name": "1", "value": 2, "attrs": {"w": 3, "h": 4}}),
+        ObjModel(key={"name": "5", "value": 6, "attrs": {"w": 7, "h": 8}})]
+
+    def test_useage(self):
+        self.assertListEqual(select(self.model1, "name"), [
+            {"name": "1"}, {"name": "4"}, {"name": "7"}])
+
+        self.assertListEqual(select(self.model1, "age"), [
+            {"age": 23}, {"age": 56}, {"age": 89}])
+
+        self.assertListEqual(select(self.model1, "n=name", "a=age"), [
+            {"n": "1", "a": 23}, {"n": "4", "a": 56}, {"n": "7", "a": 89}])
+
+        self.assertListEqual(select(self.model1, "*"), self.model1)
+
+        self.assertListEqual(select(self.model1, "person=*"), [
+            {"person": {
+                "name": "1", "age": 23}},
+            {"person": {
+                "name": "4", "age": 56}},
+            {"person": {
+                "name": "7", "age": 89}}])
+
+        self.assertListEqual(select(self.model2, "name", "obj.key"), [
+            {"name": "1", "obj_key": "a"},
+            {"name": "2", "obj_key": "b"},
+            {"name": "3", "obj_key": "c"},
+            {"name": "4", "obj_key": "d"}])
+
+        self.assertListEqual(select(self.model2, "name", "key=obj.key"), [
+            {"name": "1", "key": "a"},
+            {"name": "2", "key": "b"},
+            {"name": "3", "key": "c"},
+            {"name": "4", "key": "d"}])
+
+        self.assertListEqual(select(self.model3, "key.attrs.*"), [
+            {"w": 3, "h": 4},
+            {"w": 7, "h": 8}])
+
+        self.assertListEqual(select(self.model3, "name=key.name", "key.value", "key.attrs.*"), [
+            {"name": "1", "key_value": 2, "w": 3, "h": 4},
+            {"name": "5", "key_value": 6, "w": 7, "h": 8}])

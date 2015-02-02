@@ -23,3 +23,27 @@ def getval(obj, keys, default=None):
         obj = default
         break
     return obj
+
+
+def select(lst, *fields):
+    """Select("a", "v=b") from [{"a": 1, "b": 2, "c": 3}, ...]
+        => [{"a": 1, "v": 2}, ...]
+    """
+    fields = [f for f in fields if f]
+    result_lst = []
+
+    for i in lst:
+        item = {}
+        for f in fields:
+            if f.find("=") != -1:
+                k, f = f.split("=")
+            else:
+                k = f.replace(".", "_")
+
+            val = getval(i, f)
+            if k.find("*") != -1:
+                item.update(val)
+            else:
+                item[k] = val
+        result_lst.append(item)
+    return result_lst
