@@ -4,7 +4,7 @@
 from collections import namedtuple
 
 from unittest import TestCase
-from pysqllike.sqllike_filters import getval, select
+from pysqllike.sqllike_filters import getval, select, groupby
 
 ObjModel = namedtuple("ObjModel", ["key"])
 
@@ -16,7 +16,7 @@ class Test_getval(TestCase):
             "int": 7, "obj": ObjModel(key=({
                 "false": False}, ObjModel(key=True)))}}
 
-    def test_useage(self):
+    def test_usage(self):
         self.assertEqual(getval(self.model1, "int"), 1)
         self.assertEqual(getval(self.model1, "float"), 2.0)
         self.assertEqual(getval(self.model1, "str"), "3")
@@ -56,7 +56,7 @@ class Test_select(TestCase):
         ObjModel(key={"name": "1", "value": 2, "attrs": {"w": 3, "h": 4}}),
         ObjModel(key={"name": "5", "value": 6, "attrs": {"w": 7, "h": 8}})]
 
-    def test_useage(self):
+    def test_usage(self):
         self.assertListEqual(select(self.model1, "name"), [
             {"name": "1"}, {"name": "4"}, {"name": "7"}])
 
@@ -95,3 +95,32 @@ class Test_select(TestCase):
         self.assertListEqual(select(self.model3, "name=key.name", "key.value", "key.attrs.*"), [
             {"name": "1", "key_value": 2, "w": 3, "h": 4},
             {"name": "5", "key_value": 6, "w": 7, "h": 8}])
+
+
+class Test_groupby(TestCase):
+    model1 = [
+        {"name": "a", "val": 1, "attrs": {"cached": False}},
+        {"name": "b", "val": 1, "attrs": {"cached": False}},
+        {"name": "a", "val": 2, "attrs": {"cached": True}},
+        {"name": "c", "val": 2, "attrs": {"cached": False}},
+        {"name": "b", "val": 3, "attrs": {"cached": True}}]
+
+    def test_usage(self):
+        self.assertDictEqual(groupby(self.model1, "name"), {
+            "a": [
+                {"name": "a", "val": 1, "attrs": {"cached": False}},
+                {"name": "a", "val": 2, "attrs": {"cached": True}}],
+            "b": [
+                {"name": "b", "val": 1, "attrs": {"cached": False}},
+                {"name": "b", "val": 3, "attrs": {"cached": True}}],
+            "c": [
+                {"name": "c", "val": 2, "attrs": {"cached": False}}]})
+
+        self.assertDictEqual(groupby(self.model1, "attrs.cached"), {
+            False: [
+                {"name": "a", "val": 1, "attrs": {"cached": False}},
+                {"name": "b", "val": 1, "attrs": {"cached": False}},
+                {"name": "c", "val": 2, "attrs": {"cached": False}}],
+            True: [
+                {"name": "a", "val": 2, "attrs": {"cached": True}},
+                {"name": "b", "val": 3, "attrs": {"cached": True}}]})

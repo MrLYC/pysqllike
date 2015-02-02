@@ -47,3 +47,19 @@ def select(lst, *fields):
                 item[k] = val
         result_lst.append(item)
     return result_lst
+
+
+def groupby(lst, field):
+    """[{"key": "a", "val": 1}, {"key": "b", "val": 2}, {"key": "a", "val": 3}]
+    groupby key => {
+        "a": [{"key": "a", "val": 1}, {"key": "a", ""}],
+        "b": [{"key": "b", "val": 2}]
+    }
+    """
+    result = {}
+    for i in lst:
+        key = getval(i, field)
+        if key not in result:
+            result[key] = []
+        result[key].append(i)
+    return result
