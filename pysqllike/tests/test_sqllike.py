@@ -4,7 +4,7 @@
 from collections import namedtuple
 
 from unittest import TestCase
-from pysqllike.sqllike_filters import getval, select, groupby, calc
+from pysqllike.sqllike_filters import getval, select, groupby, calc, where
 
 ObjModel = namedtuple("ObjModel", ["key"])
 
@@ -149,3 +149,29 @@ class Test_exp_eval(TestCase):
         for exp in forbidden_exps:
             with self.assertRaises(ValueError):
                 calc(None, exp)
+
+
+class Test_wehre(TestCase):
+    model1 = [
+        {"key": "a", "val": 1},
+        {"key": "a", "val": 2},
+        {"key": "b", "val": 3},
+        {"key": "a", "val": 4},
+        {"key": "b", "val": 5},
+        {"key": "a", "val": 6}]
+
+    def test_usage(self):
+        self.assertListEqual(where(self.model1, "`key` == 'a'"), [
+            {"key": "a", "val": 1},
+            {"key": "a", "val": 2},
+            {"key": "a", "val": 4},
+            {"key": "a", "val": 6}])
+
+        self.assertListEqual(where(self.model1, "`val` % 2 == 1"), [
+            {"key": "a", "val": 1},
+            {"key": "b", "val": 3},
+            {"key": "b", "val": 5}])
+
+        self.assertListEqual(where(
+            self.model1, "`key` == 'b' and `val` in [5, 6]"),
+            [{"key": "b", "val": 5}])

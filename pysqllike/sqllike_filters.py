@@ -6,7 +6,7 @@ import tokenize
 import token
 import StringIO
 
-__all__ = ["getval", "select", "groupby", "calc"]
+__all__ = ["getval", "select", "groupby", "calc", "where"]
 
 
 def getval(obj, keys, default=None, call_func=False):
@@ -120,3 +120,13 @@ def calc(model, exp):
         parts.append(part)
 
     return _const_eval("".join(parts))
+
+
+def where(lst, exp):
+    """Filter items where match the exp
+    """
+    result = []
+    for i in lst:
+        if calc(i, exp):
+            result.append(i)
+    return result
