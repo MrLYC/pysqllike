@@ -39,6 +39,8 @@ class Test_getval(TestCase):
 
         self.assertEqual(getval(self.model1, "dict.noexist", False), False)
 
+        self.assertNotIsInstance(getval(lambda: range(5), "`*`", False), list)
+
 
 class Test_select(TestCase):
     model1 = [
@@ -126,7 +128,7 @@ class Test_groupby(TestCase):
                 {"name": "b", "val": 3, "attrs": {"cached": True}}]})
 
 
-class Test_exp_eval(TestCase):
+class Test_calc(TestCase):
     model1 = {
         "int": 1, "float": 2.3, "str": "456", "list": [7, 8.9, "10"],
         "dict": {"key1": 11, "key2": ObjModel(key=12.13)}}
@@ -136,15 +138,22 @@ class Test_exp_eval(TestCase):
         self.assertEqual(calc(self.model1, "0.09 < `float`/23 < 0.1"), True)
         self.assertEqual(calc(self.model1, "`str` == '456'"), True)
         self.assertEqual(calc(self.model1, "7 in `list`"), True)
-        self.assertEqual(calc(self.model1, "'key3' not in `dict.keys`"), True)
+        self.assertNotIsInstance(calc(self.model1, "`dict.keys`"), (list, tuple))
         self.assertEqual(calc(self.model1, "`dict.key1`/10 == `int`"), True)
-        self.assertEqual(calc(self.model1, "'`dict.key2`'"), "ObjModel(key=12.13)")
+        self.assertEqual(calc(self.model1, "'`dict.key2`'"), "`dict.key2`")
+        self.assertEqual(calc(self.model1, "`dict.key2`"), "ObjModel(key=12.13)")
         self.assertEqual(calc(self.model1, "12 and 34 or 56"), 34)
+
+    def test_func(self):
+        self.assertEqual(calc("123", "len(`*`)"), 3)
+        self.assertEqual(calc(range(5), "sum(`*`)"), 10)
+        self.assertEqual(calc(-2, "abs(`*`)"), 2)
 
     def test_evil(self):
         forbidden_exps = (
             "import os", "raw_input()", "dir()", "x=1", "lambda x:1",
-            "__import__('os').system('rm -rf ./')", "`__class__`.__name__")
+            "__import__('os').system('rm -rf ./')", "`__class__`.__name__",
+            "len.__class__", "del len")
 
         for exp in forbidden_exps:
             with self.assertRaises(ValueError):
@@ -159,6 +168,8 @@ class Test_wehre(TestCase):
         {"key": "a", "val": 4},
         {"key": "b", "val": 5},
         {"key": "a", "val": 6}]
+
+    model2 = [range(6), range(5), range(3, 5), range(7, 9)]
 
     def test_usage(self):
         self.assertListEqual(where(self.model1, "`key` == 'a'"), [
@@ -175,6 +186,9 @@ class Test_wehre(TestCase):
         self.assertListEqual(where(
             self.model1, "`key` == 'b' and `val` in [5, 6]"),
             [{"key": "b", "val": 5}])
+
+        self.assertListEqual(where(
+            self.model2, "sum(`*`) == 15 "), [range(6), range(7, 9)])
 
 
 class Test_each(TestCase):

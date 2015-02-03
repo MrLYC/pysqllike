@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-import re
+from ast import literal_eval
 import tokenize
 import token
 import StringIO
@@ -10,7 +10,7 @@ __all__ = [
     "getval", "select", "groupby", "calc", "where", "each", "limit", "reverse"]
 
 
-def getval(obj, keys, default=None, call_func=False):
+def getval(obj, keys, default=None):
     """Try to get value from obj by keys chains
     """
     for key in keys.split("."):
@@ -25,8 +25,6 @@ def getval(obj, keys, default=None, call_func=False):
                 obj = obj[int(key)]
             elif hasattr(obj, "__getitem__"):
                 obj = obj[key]
-            if call_func and callable(obj):
-                obj = obj()
             continue
         except:
             pass
@@ -75,52 +73,60 @@ def groupby(lst, field):
     return result
 
 
-_EXP_VAR_PATTENT = re.compile(r"`([\*\.\w]+?)`")
-_EXP_KEY_WORDS = ("and", "or", "not", "in", "is", "False", "True", "None")
+_EXP_KEY_WORDS = {"and", "or", "not", "in", "is", "False", "True", "None"}
 _EXP_BASE_TYPE = (
     int, long, float, str, unicode, complex, list, tuple, dict, bool, type(None))
 _EXP_TYPE_HANDLER = {}
-
-
-def _const_eval(exp):
-    """Only const can be evaluate
-    """
-    stream = StringIO.StringIO(exp)
-    parts = []
-
-    for tk_t, tk_v, _, _, _ in tokenize.generate_tokens(stream.readline):
-        if tk_t == token.NAME and tk_v not in _EXP_KEY_WORDS:
-            raise ValueError("Unknown name: %s" % tk_v)
-        parts.append(tk_v)
-
-    return eval(exp, {
-        "__builtin__": None,
-        "__file__": None,
-        "__name__": None,
-        "globals": None,
-        "locals": None})
+_EXP_FUNC = {
+    "len": len, "sum": sum, "abs": abs}
 
 
 def calc(model, exp):
     """Safety eval for where function
     """
+    stream = StringIO.StringIO(exp)
     parts = []
-    isvar = True
-    exp_parts = _EXP_VAR_PATTENT.split(exp)
-    for part in exp_parts:
-        isvar = not isvar
-        if isvar:
-            val = getval(model, part, call_func=True)
-            val_t = type(val)
-            if isinstance(val, _EXP_BASE_TYPE):
-                part = repr(val)
-            elif val_t in _EXP_TYPE_HANDLER:
-                part = _EXP_TYPE_HANDLER[val_t](val)
-            else:
-                part = "'%s'" % str(val)
-        parts.append(part)
+    invar = False
+    var_path = []
 
-    return _const_eval("".join(parts))
+    for tk_t, tk_v, _, _, _ in tokenize.generate_tokens(stream.readline):
+        part = ""
+        if tk_v == "`":
+            if invar:
+                val = getval(model, ".".join(var_path))
+                val_type = type(val)
+                var_path = []
+                if val_type in _EXP_TYPE_HANDLER:
+                    val = _EXP_TYPE_HANDLER[val_type](val)
+                try:
+                    if isinstance(val, _EXP_BASE_TYPE):
+                        part = repr(literal_eval(repr(val)))
+                    else:
+                        part = "'%s'" % str(val)
+                except ValueError:
+                    part = "'%s'" % str(val)
+            invar = not invar
+        elif invar:
+            if tk_t in (token.NAME, token.NUMBER) or tk_v == "*":
+                var_path.append(tk_v)
+            elif tk_v != ".":
+                raise ValueError("Unknown var: %s.%s" % (".".join(var_path), tk_v))
+        elif tk_v not in (".", "=") and \
+                tk_t != token.NAME or tk_v in _EXP_KEY_WORDS or tk_v in _EXP_FUNC:
+            part = tk_v
+        else:
+            raise ValueError("Forbidden expression")
+        if part:
+            parts.append(part)
+
+    env = {
+        "__builtin__": None,
+        "__file__": None,
+        "__name__": None,
+        "globals": None,
+        "locals": None}
+
+    return eval(" ".join(parts), _EXP_FUNC, env)
 
 
 def where(lst, exp):
