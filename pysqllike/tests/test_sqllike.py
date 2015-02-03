@@ -4,7 +4,7 @@
 from collections import namedtuple
 
 from unittest import TestCase
-from pysqllike.sqllike_filters import getval, select, groupby
+from pysqllike.sqllike_filters import getval, select, groupby, calc
 
 ObjModel = namedtuple("ObjModel", ["key"])
 
@@ -124,3 +124,28 @@ class Test_groupby(TestCase):
             True: [
                 {"name": "a", "val": 2, "attrs": {"cached": True}},
                 {"name": "b", "val": 3, "attrs": {"cached": True}}]})
+
+
+class Test_exp_eval(TestCase):
+    model1 = {
+        "int": 1, "float": 2.3, "str": "456", "list": [7, 8.9, "10"],
+        "dict": {"key1": 11, "key2": ObjModel(key=12.13)}}
+
+    def test_usage(self):
+        self.assertEqual(calc(self.model1, "`int`+1"), 2)
+        self.assertEqual(calc(self.model1, "0.09 < `float`/23 < 0.1"), True)
+        self.assertEqual(calc(self.model1, "`str` == '456'"), True)
+        self.assertEqual(calc(self.model1, "7 in `list`"), True)
+        self.assertEqual(calc(self.model1, "'key3' not in `dict.keys`"), True)
+        self.assertEqual(calc(self.model1, "`dict.key1`/10 == `int`"), True)
+        self.assertEqual(calc(self.model1, "'`dict.key2`'"), "ObjModel(key=12.13)")
+        self.assertEqual(calc(self.model1, "12 and 34 or 56"), 34)
+
+    def test_evil(self):
+        forbidden_exps = (
+            "import os", "raw_input()", "dir()", "x=1", "lambda x:1",
+            "__import__('os').system('rm -rf ./')", "`__class__`.__name__")
+
+        for exp in forbidden_exps:
+            with self.assertRaises(ValueError):
+                calc(None, exp)
