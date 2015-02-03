@@ -6,7 +6,7 @@ import tokenize
 import token
 import StringIO
 
-__all__ = ["getval", "select", "groupby", "calc", "where"]
+__all__ = ["getval", "select", "groupby", "calc", "where", "each"]
 
 
 def getval(obj, keys, default=None, call_func=False):
@@ -50,7 +50,7 @@ def select(lst, *fields):
                 k = f.replace(".", "_")
 
             val = getval(i, f)
-            if k.find("*") != -1:
+            if k.rfind("*") != -1:
                 item.update(val)
             else:
                 item[k] = val
@@ -74,7 +74,7 @@ def groupby(lst, field):
     return result
 
 
-_EXP_VAR_PATTENT = re.compile(r"`([\.\w]+?)`")
+_EXP_VAR_PATTENT = re.compile(r"`([\*\.\w]+?)`")
 _EXP_KEY_WORDS = ("and", "or", "not", "in", "is", "False", "True", "None")
 _EXP_BASE_TYPE = (
     int, long, float, str, unicode, complex, list, tuple, dict, bool, type(None))
@@ -130,3 +130,9 @@ def where(lst, exp):
         if calc(i, exp):
             result.append(i)
     return result
+
+
+def each(lst, exp):
+    """Calculate each item with exp
+    """
+    return map(lambda i: calc(i, exp), lst)

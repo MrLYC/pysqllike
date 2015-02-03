@@ -4,7 +4,7 @@
 from collections import namedtuple
 
 from unittest import TestCase
-from pysqllike.sqllike_filters import getval, select, groupby, calc, where
+from pysqllike.sqllike_filters import getval, select, groupby, calc, where, each
 
 ObjModel = namedtuple("ObjModel", ["key"])
 
@@ -175,3 +175,9 @@ class Test_wehre(TestCase):
         self.assertListEqual(where(
             self.model1, "`key` == 'b' and `val` in [5, 6]"),
             [{"key": "b", "val": 5}])
+
+
+class Test_each(TestCase):
+    def test_usage(self):
+        self.assertListEqual(each(range(5), '`*` + 1'), [
+            1, 2, 3, 4, 5])
