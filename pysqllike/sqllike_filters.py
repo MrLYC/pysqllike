@@ -6,7 +6,8 @@ import tokenize
 import token
 import StringIO
 
-__all__ = ["getval", "select", "groupby", "calc", "where", "each"]
+__all__ = [
+    "getval", "select", "groupby", "calc", "where", "each", "limit", "reverse"]
 
 
 def getval(obj, keys, default=None, call_func=False):
@@ -136,3 +137,19 @@ def each(lst, exp):
     """Calculate each item with exp
     """
     return map(lambda i: calc(i, exp), lst)
+
+
+def limit(lst, index, offset=None, step=1):
+    """Constrain the number of items.
+    """
+    if offset is None:
+        offset = len(lst)
+    else:
+        offset = offset + index
+    return lst[index:offset:step]
+
+
+def reverse(lst):
+    """Reverse a list
+    """
+    return lst[::-1]

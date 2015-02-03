@@ -4,7 +4,7 @@
 from collections import namedtuple
 
 from unittest import TestCase
-from pysqllike.sqllike_filters import getval, select, groupby, calc, where, each
+from pysqllike.sqllike_filters import *
 
 ObjModel = namedtuple("ObjModel", ["key"])
 
@@ -181,3 +181,20 @@ class Test_each(TestCase):
     def test_usage(self):
         self.assertListEqual(each(range(5), '`*` + 1'), [
             1, 2, 3, 4, 5])
+
+
+class Test_limit(TestCase):
+    def test_usage(self):
+        self.assertListEqual(limit(range(1, 6), 0), [
+            1, 2, 3, 4, 5])
+        self.assertListEqual(limit(range(1, 6), 1), [
+            2, 3, 4, 5])
+        self.assertListEqual(limit(range(1, 6), 1, 3), [
+            2, 3, 4])
+        self.assertListEqual(limit(range(1, 6), 1, 3, 2), [
+            2, 4])
+
+
+class Test_reverse(TestCase):
+    def test_usage(self):
+        self.assertListEqual(reverse(range(0, 10)), range(9, -1, -1))
